@@ -351,7 +351,7 @@ firebrowse.prototype.showTweet = function(twit) {
 					//console.log(Date.parse(twit.created_at));
 			
 			
-					$('#msg').html($('#msg').html()+'null<br>');
+					$('#msg').html($('#msg').html()+'bust<br>');
 				}
 		//} else {
 		//	console.log('** skipping dupe **');

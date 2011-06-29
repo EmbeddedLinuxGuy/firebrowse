@@ -1,86 +1,7 @@
 //firebrowse
 
-
-/*
- *
- *	jQuery Timer plugin v0.1
- *		Matt Schmidt [http://www.mattptr.net]
- *
- *	Licensed under the BSD License:
- *		http://mattptr.net/license/license.txt
- *
- */
-
- jQuery.timer = function (interval, callback)
- {
- /**
-  *
-  * timer() provides a cleaner way to handle intervals  
-  *
-  *	@usage
-  * $.timer(interval, callback);
-  *
-  *
-  * @example
-  * $.timer(1000, function (timer) {
-  * 	alert("hello");
-  * 	timer.stop();
-  * });
-  * @desc Show an alert box after 1 second and stop
-  * 
-  * @example
-  * var second = false;
-  *	$.timer(1000, function (timer) {
-  *		if (!second) {
-  *			alert('First time!');
-  *			second = true;
-  *			timer.reset(3000);
-  *		}
-  *		else {
-  *			alert('Second time');
-  *			timer.stop();
-  *		}
-  *	});
-  * @desc Show an alert box after 1 second and show another after 3 seconds
-  *
-  * 
-  */
-
-	var interval = interval || 100;
-
-	if (!callback)
-		return false;
-
-	_timer = function (interval, callback) {
-		this.stop = function () {
-			clearInterval(self.id);
-		};
-
-		this.internalCallback = function () {
-			callback(self);
-		};
-
-		this.reset = function (val) {
-			if (self.id)
-				clearInterval(self.id);
-
-			var val = val || 100;
-			this.id = setInterval(this.internalCallback, val);
-		};
-
-		this.interval = interval;
-		this.id = setInterval(this.internalCallback, this.interval);
-
-		var self = this;
-	};
-
-	return new _timer(interval, callback);
- };
-
-
 $(document).ready(function() {
 
-	
 	var thisFB = new firebrowse();
 	thisFB.init();
 	
@@ -99,6 +20,8 @@ firebrowse = function() {
 	
 	this.LAST_CREATED_AT = null;
 	
+	//this.DATA_SOURCE = "/c/pusher.py";
+	this.DATA_SOURCE = "http://map.mil.nf/c/pusher.py";
  }
 
 //var svg = null
@@ -140,7 +63,7 @@ firebrowse.prototype.pollData = function() {
 		console.log('polling');
 		
 		$.ajax({
-		  url: "/c/pusher.py",
+		  url: that.DATA_SOURCE,
 		  success: function(data){
 		    that.gotData(data);
 		  }, 
@@ -154,6 +77,23 @@ firebrowse.prototype.pollData = function() {
 	}
 }
 
+
+firebrowse.prototype.getReply = function(thisId) {
+		
+		var that = this;
+		
+		$.ajax({
+		  url: "/c/id.py?tweetid="+thisId,
+		  success: function(data){
+		    that.gotReply(data);
+		  }, 
+		  error: function(data, error) {
+				console.log('reply error: '+error);
+				console.log(data);
+			}
+		});
+
+}
 
 firebrowse.prototype.startMainTimer = function() {
 
@@ -171,6 +111,17 @@ firebrowse.prototype.stopMainTimer = function() {
 
 }
 
+
+firebrowse.prototype.gotReply = function(data) {
+
+	console.log('** reply **');
+	console.log(data);
+	
+	this.showReply(data);
+	
+	
+
+}
 
 firebrowse.prototype.gotData = function(data) {
 
@@ -230,10 +181,67 @@ firebrowse.prototype.gotData = function(data) {
 
 }
 
+/*
+firebrowse.prototype.showReply = function(twit) {
+
+	var that = this;
+	
+	console.log(twit)
+
+	if (twit.geo && twit.geo.coordinates) {	
+
+		d3.select("#states").append("svg:circle2")
+	      .attr("transform", function(d) { 
+			return "translate(" +  that.xy([twit.geo.coordinates[1], twit.geo.coordinates[0]] ) + ")"; 
+		})
+		.attr("r", 0)
+	      .transition()
+		      .duration(1000)
+		      .delay(function(d, i) { return i * 50; })
+		      .attr("r", 20);	
+
+			//for (var j=0; j<10; j++) {
+				$('#msg').html($('#msg').html()+'['+twit.geo.coordinates[1]+', '+twit.geo.coordinates[0]+']<br>');
+				//$("#msg").css({ scrollTop: $("#msg").attr("scrollHeight") });
+			//}
+					
+			
+	} else {
+
+		console.log(twit);
+		
+		console.log(twit.place +' '+ twit.place.bounding_box +' '+  twit.place.bounding_box.coordinates)
+		
+		if (twit.place && twit.place.bounding_box && twit.place.bounding_box.coordinates) {
+			
+			console.log('here');
+			
+			//var thisLat = (twit.bounding_box.coordinates[2][1] - twit.bounding_box.coordinates[0][1] / 2) + twit.bounding_box.coordinates[2][1];
+			//var thisLong = (twit.bounding_box.coordinates[2][0] - twit.bounding_box.coordinates[0][0] / 2) + twit.bounding_box.coordinates[2][0];
+			
+			//console.log(thisLat +' '+thisLong)
+			
+		} else {
+			$('#msg').html($('#msg').html()+'null<br>');			
+		}
+		
+
+
+	}
+
+
+}
+
+*/
+
 firebrowse.prototype.showTweet = function(twit) {
 	
 		var that = this;
 		
+		var thisCoord1 = null;
+		var thisCoord2 = null;
+		
+		var thisRadius = this.getRadius(twit.user.followers_count);
 		
 		//var thisMilliseconds = null;
 		//var thisTweetIsADuplicate = false;
@@ -257,36 +265,88 @@ firebrowse.prototype.showTweet = function(twit) {
 		//if (!thisTweetIsADuplicate) {
 	
 				if (twit.geo && twit.geo.coordinates) {	
+					
+					thisCoord1 = twit.geo.coordinates[1];
+					thisCoord2 = twit.geo.coordinates[0];
 
-					d3.select("#states").append("svg:circle")
-				      .attr("transform", function(d) { 
-						return "translate(" +  that.xy([twit.geo.coordinates[1], twit.geo.coordinates[0]] ) + ")"; 
-					})
-					.attr("r", 0)
-				      .transition()
-					      .duration(1000)
-					      .delay(function(d, i) { return i * 50; })
-					      .attr("r", 20);	
+				
+					//if (twit.in_reply_to_status_id_str != null) {
+					//	that.getReply(twit.in_reply_to_status_id_str);
+					//}		
+						
+				} else if (twit.place && twit.place.bounding_box && twit.place.bounding_box.coordinates) {
 
-						//for (var j=0; j<10; j++) {
-							$('#msg').html($('#msg').html()+'['+twit.geo.coordinates[1]+', '+twit.geo.coordinates[0]+']<br>');
-							//$("#msg").css({ scrollTop: $("#msg").attr("scrollHeight") });
-						//}
-				} else {
+
+						var thisLong1 = twit.place.bounding_box.coordinates[0][2][0];
+						var thisLong2 = twit.place.bounding_box.coordinates[0][0][0];
+						 
+						var thisLat1 = twit.place.bounding_box.coordinates[0][2][1];
+						var thisLat2 = twit.place.bounding_box.coordinates[0][0][1];
+
+						var thisLong = (thisLong1 + thisLong2) / 2;
+						var thisLat = (thisLat1 +thisLat2) / 2;
+
+						//console.log(thisLong1+' '+thisLat1+ ' '+ thisLong2 + ' '+ thisLat2+' :'+thisLat+' '+thisLong)
+
+
+						thisCoord1 = thisLong.toFixed(8);
+						thisCoord2 = thisLat.toFixed(8);
+					
+				}
+					
+					if (thisCoord1 != null && thisCoord2 != null) {
+						
+						d3.select("#states").append("svg:circle")
+					      .attr("transform", function(d) { 
+							return "translate(" +  that.xy([thisCoord1, thisCoord2] ) + ")"; 
+						})
+						.attr("r", 0)
+					      .transition()
+						      .duration(1000)
+						      .delay(function(d, i) { return i * 50; })
+						      .attr("r", thisRadius);	
+
+							//for (var j=0; j<10; j++) {
+								$('#msg').html($('#msg').html()+'['+thisCoord1+', '+thisCoord2+']<br>');
+						
+ 					} else {
+	
+						$('#msg').html($('#msg').html()+'null<br>');
+	
+					}
 			
-					console.log(twit);
+					
+								//$("#msg").css({ scrollTop: $("#msg").attr("scrollHeight") });
+							//}
+					
 			
 					//var d = new Date(twit.created_at);
 					//console.log(d);
 			
 					//console.log(Date.parse(twit.created_at));
-			
-			
-					$('#msg').html($('#msg').html()+'null<br>');
-				}
+						
+				
 		//} else {
 		//	console.log('** skipping dupe **');
 		//}
+}
+
+firebrowse.prototype.getRadius = function(followers) {
+
+	var radius = 5;
+	
+	if (followers > 100 && followers < 300) {
+		radius = 10;
+	} else if (followers > 300 && followers < 1000) {
+		radius = 15;
+	} else if (followers > 1000 && followers < 10000) {
+		radius = 20;
+	} else if (followers < 10000) {
+		radius = 25;
+	}
+
+	return radius;
+
 }
 
 firebrowse.prototype.drawMap = function() {

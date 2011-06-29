@@ -155,6 +155,23 @@ firebrowse.prototype.pollData = function() {
 }
 
 
+firebrowse.prototype.getReply = function(thisId) {
+		
+		var that = this;
+		
+		$.ajax({
+		  url: "/c/id.py?tweetid="+thisId,
+		  success: function(data){
+		    that.gotReply(data);
+		  }, 
+		  error: function(data, error) {
+				console.log('reply error: '+error);
+				console.log(data);
+			}
+		});
+
+}
+
 firebrowse.prototype.startMainTimer = function() {
 
 	var that = this;
@@ -171,6 +188,17 @@ firebrowse.prototype.stopMainTimer = function() {
 
 }
 
+
+firebrowse.prototype.gotReply = function(data) {
+
+	console.log('** reply **');
+	console.log(data);
+	
+	this.showReply(data);
+	
+	
+
+}
 
 firebrowse.prototype.gotData = function(data) {
 
@@ -230,6 +258,40 @@ firebrowse.prototype.gotData = function(data) {
 
 }
 
+firebrowse.prototype.showReply = function(twit) {
+
+	var that = this;
+	
+	console.log(twit)
+
+	if (twit.geo && twit.geo.coordinates) {	
+
+		d3.select("#states").append("svg:circle2")
+	      .attr("transform", function(d) { 
+			return "translate(" +  that.xy([twit.geo.coordinates[1], twit.geo.coordinates[0]] ) + ")"; 
+		})
+		.attr("r", 0)
+	      .transition()
+		      .duration(1000)
+		      .delay(function(d, i) { return i * 50; })
+		      .attr("r", 20);	
+
+			//for (var j=0; j<10; j++) {
+				$('#msg').html($('#msg').html()+'['+twit.geo.coordinates[1]+', '+twit.geo.coordinates[0]+']<br>');
+				//$("#msg").css({ scrollTop: $("#msg").attr("scrollHeight") });
+			//}
+					
+			
+	} else {
+
+		console.log(twit);
+
+		$('#msg').html($('#msg').html()+'null<br>');
+	}
+
+
+}
+
 firebrowse.prototype.showTweet = function(twit) {
 	
 		var that = this;
@@ -257,6 +319,8 @@ firebrowse.prototype.showTweet = function(twit) {
 		//if (!thisTweetIsADuplicate) {
 	
 				if (twit.geo && twit.geo.coordinates) {	
+					
+					var thisRadius = this.getRadius(twit.user.followers_count);
 
 					d3.select("#states").append("svg:circle")
 				      .attr("transform", function(d) { 
@@ -266,12 +330,17 @@ firebrowse.prototype.showTweet = function(twit) {
 				      .transition()
 					      .duration(1000)
 					      .delay(function(d, i) { return i * 50; })
-					      .attr("r", 20);	
+					      .attr("r", thisRadius);	
 
 						//for (var j=0; j<10; j++) {
 							$('#msg').html($('#msg').html()+'['+twit.geo.coordinates[1]+', '+twit.geo.coordinates[0]+']<br>');
 							//$("#msg").css({ scrollTop: $("#msg").attr("scrollHeight") });
 						//}
+						
+					//if (twit.in_reply_to_status_id_str != null) {
+					//	that.getReply(twit.in_reply_to_status_id_str);
+					//}		
+						
 				} else {
 			
 					console.log(twit);
@@ -287,6 +356,24 @@ firebrowse.prototype.showTweet = function(twit) {
 		//} else {
 		//	console.log('** skipping dupe **');
 		//}
+}
+
+firebrowse.prototype.getRadius = function(followers) {
+
+	var radius = 5;
+	
+	if (followers > 100 && followers < 300) {
+		radius = 10;
+	} else if (followers > 300 && followers < 1000) {
+		radius = 15;
+	} else if (followers > 1000 && followers < 10000) {
+		radius = 20;
+	} else if (followers < 10000) {
+		radius = 25;
+	}
+
+	return radius;
+
 }
 
 firebrowse.prototype.drawMap = function() {
